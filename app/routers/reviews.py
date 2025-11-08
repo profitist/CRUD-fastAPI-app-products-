@@ -9,7 +9,7 @@ from app.schemas import Review, ReviewCreate
 from app.db_depends import get_async_db
 from app.models.reviews import Review as ReviewModel
 from app.models.users import User as UserModel
-from app.models.products import Product as ProductModel
+from app.models.products import ProductModel as ProductModel
 from app.auth import get_current_buyer, get_current_admin
 
 router = APIRouter(
@@ -52,7 +52,7 @@ async def create_review(
     if not db_product:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product does not exist"
+            detail="ProductModel does not exist"
         )
 
     db_review = ReviewModel(**review.model_dump(), user_id=user_id)

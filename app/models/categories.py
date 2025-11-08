@@ -17,8 +17,8 @@ class Category(Base):
         nullable=True
     )
 
-    products: Mapped[List['Product']] = relationship(
-        'Product',
+    products: Mapped[List['ProductModel']] = relationship(
+        'ProductModel',
         back_populates='category'
     )
 

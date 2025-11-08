@@ -32,7 +32,7 @@ class Review(Base):
         back_populates='reviews'
     )
 
-    product: Mapped['Product'] = relationship(
-        'Product',
+    product: Mapped['ProductModel'] = relationship(
+        'ProductModel',
         back_populates='reviews'
     )

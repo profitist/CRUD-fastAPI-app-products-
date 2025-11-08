@@ -20,8 +20,8 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
     role: Mapped[str] = mapped_column(String, default='buyer')
 
-    products: Mapped['Product'] = relationship(
-        'Product',
+    products: Mapped['ProductModel'] = relationship(
+        'ProductModel',
         back_populates='seller'
     )
 

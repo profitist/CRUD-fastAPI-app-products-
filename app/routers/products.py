@@ -1,17 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, update
 from typing import List, Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, and_, update, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from app.schemas import ProductSheme, ProductCreate, Review
-from app.models.products import Product
-from app.models.categories import Category
-from app.db_depends import get_async_db
-from app.models.users import User as UserModel
-from app.models.reviews import Review as ReviewModel
 from app.auth import get_current_seller
+from app.db_depends import get_async_db
+from app.models.categories import Category
+from app.models.products import ProductModel
+from app.models.reviews import Review as ReviewModel
+from app.models.users import User as UserModel
+from app.schemas import ProductSheme, ProductCreate, Review, ProductList
 
 router = APIRouter(
     prefix='/products',
@@ -21,13 +21,58 @@ router = APIRouter(
 
 @router.get(
     path='/',
-    response_model=List[ProductSheme],
+    response_model=ProductList,
     status_code=status.HTTP_200_OK
 )
-async def get_all_products(db: Annotated[AsyncSession, Depends(get_async_db)]):
-    stmt = select(Product).where(Product.is_active)
+async def get_all_products(
+        db: Annotated[AsyncSession, Depends(get_async_db)],
+        page: int = Query(1, ge=1),
+        page_size: int = Query(20, gt=0, le=1),
+        category_id: int | None = Query(None, description='ID категории'),
+        min_price: float | None = Query(None,
+                                        description='Минимальная цена товара'),
+        max_price: float | None = Query(None,
+                                        description='Максимальная цена товара'),
+        in_stock: bool | None = Query(None,
+                                      description='true - товар есть в '
+                                                  'наличии, иначе false'),
+        seller_id: int | None = Query(None,
+                                      description='ID продавца для фильтрации')
+):
+    if min_price and max_price and min_price > max_price:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='min_price не может быть больше max_price'
+        )
+
+    filters = [ProductModel.is_active == True]
+    if category_id is not None:
+        filters.append(ProductModel.category_id == category_id)
+    if min_price is not None:
+        filters.append(ProductModel.price >= min_price)
+    if max_price is not None:
+        filters.append(ProductModel.price <= max_price)
+    if in_stock is not None:
+        filters.append(
+            ProductModel.stock > 0 if in_stock else ProductModel.stock == 0)
+    if seller_id is not None:
+        filters.append(ProductModel.seller == seller_id)
+
+    total_stmt = select(
+        func.count()
+    ).select_from(ProductModel).where(*filters)
+
+    total = await db.scalar(total_stmt) or 0
+
+    stmt = (select(ProductModel).where(*filters).order_by(
+        ProductModel.id).offset((page - 1) * page_size).limit(page_size))
     response = await db.scalars(stmt)
-    return response.all()
+    return {
+        'items': response.all(),
+        'total': total,
+        'page': page,
+        'page_size': page_size
+    }
 
 
 @router.post(
@@ -44,7 +89,7 @@ async def create_product(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Category {product.category_id} does not exist"
         )
-    db_product = Product(**product.model_dump(), seller_id=current_user.id)
+    db_product = ProductModel(**product.model_dump(), seller_id=current_user.id)
     db.add(db_product)
     await db.commit()
     await db.refresh(db_product)
@@ -57,10 +102,10 @@ async def create_product(
     status_code=status.HTTP_200_OK)
 async def get_products_category(
         category_id: int, db: Annotated[AsyncSession, Depends(get_async_db)]):
-    stmt = select(Product).where(
+    stmt = select(ProductModel).where(
         and_(
-            Product.category_id == category_id,
-            Product.is_active
+            ProductModel.category_id == category_id,
+            ProductModel.is_active
         )
     )
     result = await db.scalars(stmt)
@@ -76,10 +121,10 @@ async def get_product(
         product_id: int,
         db: Annotated[AsyncSession, Depends(get_async_db)]
 ):
-    stmt = select(Product).where(
+    stmt = select(ProductModel).where(
         and_(
-            product_id == Product.id,
-            Product.is_active
+            product_id == ProductModel.id,
+            ProductModel.is_active
         )
     )
     response = await db.scalars(stmt)
@@ -103,7 +148,7 @@ async def update_product(
         db: Annotated[AsyncSession, Depends(get_async_db)],
         current_user: Annotated[UserModel, Depends(get_current_seller)]
 ):
-    stmt = select(Product).where(product_id == Product.id)
+    stmt = select(ProductModel).where(product_id == ProductModel.id)
     result = await db.scalars(stmt)
     db_product = result.first()
     if db_product is None:
@@ -122,8 +167,8 @@ async def update_product(
             detail=f"Category {product.category_id} does not exist"
         )
     await db.execute(
-        update(Product).where(
-            product_id == Product.id
+        update(ProductModel).where(
+            product_id == ProductModel.id
         ).values(**product.model_dump())
     )
     await db.commit()
@@ -140,7 +185,7 @@ async def delete_product(
         db: Annotated[AsyncSession, Depends(get_async_db)],
         current_user: Annotated[UserModel, Depends(get_current_seller)]
 ):
-    stmt = select(Product).where(product_id == Product.id)
+    stmt = select(ProductModel).where(product_id == ProductModel.id)
     response = await db.scalars(stmt)
     result = response.first()
     if result is None:
@@ -163,12 +208,12 @@ async def get_reviews(
 ):
     response = await db.scalars(
         select(ReviewModel).join(
-            Product, ReviewModel.product_id == Product.id
+            ProductModel, ReviewModel.product_id == ProductModel.id
         ).where(
             and_(
                 product_id == ReviewModel.product_id,
                 ReviewModel.is_active,
-                Product.is_active
+                ProductModel.is_active
             )
         )
     )

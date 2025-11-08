@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel, Field, ConfigDict, EmailStr, PositiveInt
-from typing import Optional
+from typing import Optional, List
 
 
 class CategoryCreate(BaseModel):
@@ -131,3 +131,14 @@ class Review(BaseModel):
     is_active: bool = Field(default=True)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProductList(BaseModel):
+    items: List[ProductCreate] = Field(description='Товары для текущей страницы')
+    total: int = Field(ge=0, description='Общее количество товаров')
+    page: int = Field(ge=1, description='Номер текущей страницы')
+    page_size: int = Field(ge=1, description='Количество элементов на странице')
+
+    model_config = ConfigDict(from_attributes=True)
+
+
