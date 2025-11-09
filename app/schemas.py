@@ -142,3 +142,20 @@ class ProductList(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class Order(BaseModel):
+    id: int
+    user_id: int
+    total_price: float
+    status: str
+    is_active: bool = True
+
+    model_config = ConfigDict(from_attributes=True, extra='allow')
+
+
+class OrderList(BaseModel):
+    items: List[Order] = Field(description='Список заказов')
+    total: int = Field(ge=0, description='Общее количество заказов')
+    page: int = Field(ge=1, description='Номер страницы')
+    page_size: int = Field(ge=1, description='Количество элементов на странице')
+
+    model_config = ConfigDict(from_attributes=True)

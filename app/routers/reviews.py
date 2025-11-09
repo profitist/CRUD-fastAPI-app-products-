@@ -76,25 +76,25 @@ async def update_product_rating(db: AsyncSession, product_id: int) -> None:
     await db.commit()
 
 
-# @router.delete(
-#     path='/{review_id}',
-#     response_model=Dict[str, str],
-#     status_code=status.HTTP_200_OK
-# )
-# async def delete_review(
-#         db: Annotated[AsyncSession, get_async_db],
-#         review_id: int,
-#         auth: Annotated[UserModel, Depends(get_current_admin)]
-# ) -> Dict:
-#     stmt = select(ReviewModel).where(review_id == ReviewModel.id)
-#     db_response = await db.scalars(stmt)
-#     db_review = db_response.first()
-#     if not db_review:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Review does not exist"
-#         )
-#     db_review.is_active = False
-#     await db.commit()
-#     await db.refresh(db_review)
-#     return {'message': 'Review deleted'}
+@router.delete(
+    path='/{review_id}',
+    response_model=Dict[str, str],
+    status_code=status.HTTP_200_OK
+)
+async def delete_review(
+        db: Annotated[AsyncSession, get_async_db],
+        review_id: int,
+        auth: Annotated[UserModel, Depends(get_current_admin)]
+) -> Dict:
+    stmt = select(ReviewModel).where(review_id == ReviewModel.id)
+    db_response = await db.scalars(stmt)
+    db_review = db_response.first()
+    if not db_review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review does not exist"
+        )
+    db_review.is_active = False
+    await db.commit()
+    await db.refresh(db_review)
+    return {'message': 'Review deleted'}
