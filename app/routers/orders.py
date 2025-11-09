@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status as status_c
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db_depends import get_async_db
-from app.models.order import Order as OrderModel
+from app.models.orders import Order as OrderModel
 from app.schemas import Order as OrderSchema
 
 
-router = APIRouter(prefix='orders')
+router = APIRouter(prefix='/orders', tags=['orders'])
 
 
 @router.get("/", response_model=List[OrderSchema])

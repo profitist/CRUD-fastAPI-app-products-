@@ -1,11 +1,13 @@
 from typing import List
 
-from sqlalchemy import String, DECIMAL, Boolean, Float, Integer, ForeignKey
+from sqlalchemy import String, DECIMAL, Boolean, Float, Integer, ForeignKey, \
+    Computed, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from sqlalchemy.dialects.postgresql import TSVECTOR
 
 from app.database import Base
-from app.models.order import order_products
+from app.models.orders import order_products
+
 
 class ProductModel(Base):
     __tablename__ = 'products'
@@ -47,5 +49,22 @@ class ProductModel(Base):
         'Order',
         secondary=order_products,
         back_populates='items'
+    )
+
+    tsv: Mapped[TSVECTOR] = mapped_column(
+        TSVECTOR,
+        Computed(
+            """
+            setweight(to_tsvector('english', coalesce(name, '')), 'A')
+            || 
+            setweight(to_tsvector('english', coalesce(description, '')), 'B')
+            """,
+            persisted=True
+        ),
+        nullable=False
+    )
+
+    __table_args__ = (
+        Index('ix_products_tsv_gin', 'tsv', postgresql_using='gin'),
     )
 
