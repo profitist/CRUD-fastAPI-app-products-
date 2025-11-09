@@ -33,11 +33,13 @@ CourseProj/
 │   │   ├── categories.py
 │   │   ├── products.py
 │   │   └── reviews.py
+|   |   |__ orders.py
 │   ├── routers/         # API эндпоинты
 │   │   ├── users.py
 │   │   ├── categories.py
 │   │   ├── products.py
 │   │   └── reviews.py
+|   |   |___ orders.py
 │   ├── migrations/      # Alembic миграции
 │   ├── auth.py          # Аутентификация и авторизация
 │   ├── config.py        # Конфигурация
@@ -50,7 +52,8 @@ CourseProj/
 ├── docker-compose.prod.yml
 ├── requirements.txt
 ├── alembic.ini
-└── .env
+├── .env                # Секреты (не в Git!)
+└── .env.example        # Шаблон переменных окружения
 ```
 
 ## Требования
@@ -70,23 +73,52 @@ cd CourseProj
 
 ### 2. Настройка переменных окружения
 
-Создайте файл `.env` в корне проекта:
+Скопируйте шаблон `.env.example` и создайте файл `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Заполните `.env` файл своими значениями:
 
 ```env
 SECRET_KEY=your_secret_key_here
+
+# Database
+POSTGRES_USER=ecommerce_user
+POSTGRES_PASSWORD=your_strong_password
+POSTGRES_DB=ecommerce_db
 ```
+
+**⚠️ Важно:** Файл `.env` содержит секреты и не должен попадать в Git!
 
 ### 3. Запуск через Docker Compose
 
 ```bash
-# Запуск в режиме разработки
-docker-compose up --build
+# Сборка и запуск контейнеров
+docker-compose up -d --build
 
-# Запуск в фоновом режиме
-docker-compose up -d
+# Применение миграций к базе данных в контейнере
+docker-compose exec web alembic upgrade head
 ```
 
 Приложение будет доступно по адресу: `http://localhost:8000`
+
+#### Полезные Docker команды
+
+```bash
+# Просмотр логов
+docker-compose logs -f web
+
+# Остановка контейнеров
+docker-compose down
+
+# Пересборка без кэша
+docker-compose build --no-cache web
+
+# Выполнение команд внутри контейнера
+docker-compose exec web <command>
+```
 
 ### 4. Локальная установка (без Docker)
 
@@ -141,6 +173,8 @@ uvicorn app.main:app --reload
 - `GET /reviews/` - Получить все отзывы
 - `POST /reviews/` - Создать отзыв (только покупатели)
 
+h3: ### Заказы ('/users')
+
 ## Роли пользователей
 
 - **buyer** - покупатель (может оставлять отзывы)
@@ -160,6 +194,21 @@ uvicorn app.main:app --reload
 - Refresh token: 7 дней
 
 ## Миграции базы данных
+
+### В Docker
+
+```bash
+# Создание новой миграции
+docker-compose exec web alembic revision --autogenerate -m "описание изменений"
+
+# Применение миграций
+docker-compose exec web alembic upgrade head
+
+# Откат последней миграции
+docker-compose exec web alembic downgrade -1
+```
+
+### Локально (без Docker)
 
 ```bash
 # Создание новой миграции
