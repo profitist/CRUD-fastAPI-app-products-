@@ -30,23 +30,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = (datetime.now(timezone.utc) +
-              timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = (datetime.now(timezone.utc) +
-              timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=ALGORITHM)
 
 
 async def get_current_user(
-        token: Annotated[str, Depends(oauth2_scheme)],
-        db: Annotated[AsyncSession, Depends(get_async_db)]
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ) -> UserModel:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -61,7 +59,7 @@ async def get_current_user(
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Token expired',
+            detail="Token expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
     except jwt.PyJWTError:
@@ -74,33 +72,33 @@ async def get_current_user(
 
 
 async def get_current_seller(
-        current_user: Annotated[UserModel, Depends(get_current_user)],
+    current_user: Annotated[UserModel, Depends(get_current_user)],
 ) -> UserModel:
-    if current_user.role == 'buyer':
+    if current_user.role == "buyer":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only seller can access this endpoint',
+            detail="Only seller can access this endpoint",
         )
     return current_user
 
 
 async def get_current_buyer(
-        current_user: Annotated[UserModel, Depends(get_current_user)]
+    current_user: Annotated[UserModel, Depends(get_current_user)],
 ) -> UserModel:
-    if current_user.role == 'seller':
+    if current_user.role == "seller":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only buyer can access this endpoint',
+            detail="Only buyer can access this endpoint",
         )
     return current_user
 
 
 async def get_current_admin(
-        current_user: Annotated[UserModel, Depends(get_current_user)]
+    current_user: Annotated[UserModel, Depends(get_current_user)],
 ) -> UserModel:
-    if current_user.role != 'admin':
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail='Only admin can access this endpoint',
+            detail="Only admin can access this endpoint",
         )
     return current_user

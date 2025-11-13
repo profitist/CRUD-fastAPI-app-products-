@@ -12,7 +12,6 @@ def get_db() -> Session:
         db.close()
 
 
-
 from typing import AsyncGenerator
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession

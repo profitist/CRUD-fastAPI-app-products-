@@ -1,7 +1,9 @@
 from .categories import Category
-from .products import ProductModel
+from .products import Product
 from .users import User
 from .reviews import Review
+from .orders import Order
+from .cart_items import CartItem
 
 
-__all__ = ["Category", "ProductModel", "User", "Review"]
+__all__ = ["Category", "Product", "User", "Review", "Order", "CartItem"]

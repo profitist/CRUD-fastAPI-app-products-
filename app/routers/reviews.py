@@ -9,7 +9,7 @@ from app.schemas import Review, ReviewCreate
 from app.db_depends import get_async_db
 from app.models.reviews import Review as ReviewModel
 from app.models.users import User as UserModel
-from app.models.products import ProductModel as ProductModel
+from app.models.products import Product as ProductModel
 from app.auth import get_current_buyer, get_current_admin
 
 router = APIRouter(
@@ -18,41 +18,31 @@ router = APIRouter(
 )
 
 
-@router.get(
-    path="/",
-    response_model=List[Review],
-    status_code=status.HTTP_200_OK
-)
-async def get_reviews(db: Annotated[AsyncSession, Depends(get_async_db)])\
-        -> List[ReviewModel]:
+@router.get(path="/", response_model=List[Review], status_code=status.HTTP_200_OK)
+async def get_reviews(
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+) -> List[ReviewModel]:
     stmt = select(ReviewModel).where(ReviewModel.is_active)
     response = await db.scalars(stmt)
     db_reviews = response.all()
     return db_reviews
 
 
-@router.post(
-    path='/',
-    response_model=Review,
-    status_code=status.HTTP_201_CREATED
-)
+@router.post(path="/", response_model=Review, status_code=status.HTTP_201_CREATED)
 async def create_review(
-        review: ReviewCreate,
-        db: Annotated[AsyncSession, Depends(get_async_db)],
-        current_user: Annotated[UserModel, Depends(get_current_buyer)]
+    review: ReviewCreate,
+    db: Annotated[AsyncSession, Depends(get_async_db)],
+    current_user: Annotated[UserModel, Depends(get_current_buyer)],
 ) -> Review:
     user_id = current_user.id
 
-    stmt = select(ProductModel).where(
-        review.product_id == ProductModel.id, ProductModel.is_active
-    )
+    stmt = select(Product).where(review.product_id == Product.id, Product.is_active)
 
     db_response = await db.scalars(stmt)
     db_product = db_response.first()
     if not db_product:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="ProductModel does not exist"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Product does not exist"
         )
 
     db_review = ReviewModel(**review.model_dump(), user_id=user_id)
@@ -66,12 +56,11 @@ async def create_review(
 async def update_product_rating(db: AsyncSession, product_id: int) -> None:
     result = await db.execute(
         select(func.avg(ReviewModel.grade)).where(
-            product_id == ReviewModel.product_id,
-            ReviewModel.is_active
+            product_id == ReviewModel.product_id, ReviewModel.is_active
         )
     )
     avg_rating = result.scalar() or 0.0
-    product = await db.get(ProductModel, product_id)
+    product = await db.get(Product, product_id)
     product.rating = avg_rating
     await db.commit()
 

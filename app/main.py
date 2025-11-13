@@ -4,15 +4,15 @@ from fastapi import FastAPI, Request
 from loguru import logger
 from fastapi.responses import JSONResponse
 
-from app.routers import categories, products, users, reviews, orders
+from app.routers import categories, products, users, reviews, orders, cart
 
 app = FastAPI(
-    title='FastApi Интернет-магазин',
-    version='0.1.0',
+    title="FastApi Интернет-магазин",
+    version="0.1.0",
 )
 
 
-@app.middleware('http')
+@app.middleware("http")
 async def log_middleware(request: Request, call_next):
     log_id = str(uuid.uuid4())
     with logger.contextualize(log_id=log_id):
@@ -31,7 +31,8 @@ async def log_middleware(request: Request, call_next):
 logger.add(
     "info.log",
     format="Log: [{extra[log_id]}:{time} - {level} - {message}]",
-    level="INFO", enqueue=True
+    level="INFO",
+    enqueue=True,
 )
 
 
@@ -40,6 +41,7 @@ app.include_router(products.router)
 app.include_router(users.router)
 app.include_router(reviews.router)
 app.include_router(orders.router)
+app.include_router(cart.router)
 
 
 @app.get("/")
